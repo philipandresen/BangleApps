@@ -1,14 +1,13 @@
 { "id": "kbslide",
   "name": "Slide Keyboard",
   "version":"1.00",
-  "description": "A library for text input via onscreen keyboard",
+  "description": "A library for text input via onscreen keyboard. Easily enter characters with simple swipes.",
   "icon": "icon.png",
   "type":"textinput",
   "tags": "keyboard",
   "supports" : ["BANGLEJS2"],
   "screenshots": [{"url":"screenshot.png"},{"url": "help.png"}],
   "readme": "README.md",
-  "allow_emulator":true,
   "storage": [
     {"name":"textinput","url":"lib.js"}
   ]

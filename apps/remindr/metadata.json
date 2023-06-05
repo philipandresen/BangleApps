@@ -1,0 +1,15 @@
+{ "id": "remindr",
+  "name": "Reminder",
+  "version":"1.00",
+  "description": "A working memory prosthesis",
+  "icon": "icon.png",
+  "tags": "tool",
+  "supports" : ["BANGLEJS2"],
+  "screenshots": [{"url":"screenshot.png"},{"url": "help.png"}],
+  "readme": "README.md",
+  "allow_emulator":true,
+  "storage": [
+    {"name":"remindr.app.js","url":"app.js"},
+    {"name":"remindr.settings.json","url":"remindr.settings.json"}
+  ]
+}
