@@ -1,18 +1,8 @@
 function input(initial) {
-  const width         = 50;
-  const height        = 40;
-  const margin        = 5;
-  const offsetX       = 5;
-  const offsetY       = 43;
-  const padding       = 2;
-  const border        = 2;
-  const gridWidth     = 3;
   let typed           = initial && initial.text || "";
-  let resolveFunction = () => {
-  };
-  let shift = false;
-  const cursorChar = "_";
-  let nextChar = cursorChar;
+  let resolveFunction = () => {};
+  let shift           = false;
+  let activeKeySet;
 
   const charSets = [
     ["a", "b", "c", "d", "e", "f", "g", "h", "i"],
@@ -31,6 +21,15 @@ function input(initial) {
     [")", "_", "+", "<", ">", "?", ":", "\"", "|"],
     ["{", "}"],
   ];
+
+  const width         = 50;
+  const height        = 44;
+  const margin        = 5;
+  const offsetX       = 5;
+  const offsetY       = 30;
+  const padding       = 2;
+  const border        = 2;
+  const gridWidth     = 3;
 
   function drawKey(key) {
     let bgColor = g.theme.bg;
@@ -66,7 +65,7 @@ function input(initial) {
       if (key.special) {
         g.setColor(g.theme.fg)
          .setFont("12x20")
-         .drawString(key.special, key.x + key.w / 2 - g.stringWidth(key.special)/2, key.y + key.h / 2 - 10, false);
+         .drawString(key.special, key.x + key.w / 2 - g.stringWidth(key.special) / 2, key.y + key.h / 2 - 10, false);
       }
     }
   }
@@ -74,8 +73,11 @@ function input(initial) {
   function getKeys(charSets) {
     const keys = [];
     charSets.forEach((charSet, i) => {
-      key       = getKeyByIndex(i);
+      const key = getKeyByIndex(i);
       key.chars = charSet;
+      if (key.chars.length > 1) {
+        key.subKeys = getKeys(key.chars);
+      }
       keys.push(key);
     });
     return keys;
@@ -92,7 +94,7 @@ function input(initial) {
     return {x, y, w, h, pad: padding, bord: border, chars: [], special};
   }
 
-  const mainKeys = getKeys(charSets);
+  const mainKeys      = getKeys(charSets);
   const mainKeysShift = getKeys(charSetsShift);
   mainKeys.push(getKeyByIndex(7, "del"));
   mainKeys.push(getKeyByIndex(8, "ok"));
@@ -105,32 +107,38 @@ function input(initial) {
     return shift ? mainKeysShift : mainKeys;
   }
 
-  function getSubKeys(key) {
-    const subKeyCharSet = key.chars.map(char => [char]);
-    return getKeys(subKeyCharSet);
-  }
-
   function drawKeys(keys) {
     keys.forEach(key => {
       drawKey(key);
     });
   }
 
-  function drawTyped(text) {
+  function drawTyped(text, cursorChar) {
+    let visibleText = text;
+    let ellipsis    = false;
+    const maxWidth  = 176 - 40;
+    while (g.setFont("12x20")
+            .stringWidth(visibleText) > maxWidth) {
+      ellipsis    = true;
+      visibleText = visibleText.slice(1);
+    }
+    if (ellipsis) {
+      visibleText = "..." + visibleText;
+    }
     g.setColor(g.theme.bg2)
      .fillRect(5, 5, 171, 30);
     g.setColor(g.theme.fg2)
      .setFont("12x20")
-     .drawString(text, 10, 10, false);
+     .drawString(visibleText + cursorChar, 15, 10, false);
   }
 
   let isCursorVisible = true;
   const blinkInterval = setInterval(() => {
     isCursorVisible = !isCursorVisible;
     if (isCursorVisible) {
-      drawTyped(typed + nextChar);
+      drawTyped(typed, "_");
     } else {
-      drawTyped(typed);
+      drawTyped(typed, "");
     }
   }, 200);
 
@@ -139,97 +147,77 @@ function input(initial) {
      .fillRect(offsetX, offsetY, 176, 176);
   }
 
-  function getPressedKey(dragEvent, keys, onlyRelease) {
-    nextChar = cursorChar;
+  g.clear(true);
+
+  function getTouchedKey(touchEvent, keys) {
     return keys.reduce((pressed, key) => {
-      if (dragEvent.x < key.x) return pressed;
-      if (dragEvent.x > key.x + key.w) return pressed;
-      if (dragEvent.y < key.y) return pressed;
-      if (dragEvent.y > key.y + key.h) return pressed;
-      if (onlyRelease) {
-        // Make the cursor flash the hovered letter if it exists.
-        if (dragEvent.b === 0) {
-          nextChar = cursorChar;
-        } else {
-          nextChar = key.chars[0] ? key.chars[0] : cursorChar;
-          return;
-        }
-      }
+      if (touchEvent.x < key.x) return pressed;
+      if (touchEvent.x > key.x + key.w) return pressed;
+      if (touchEvent.y < key.y) return pressed;
+      if (touchEvent.y > key.y + key.h) return pressed;
       return key;
     }, null);
   }
 
-  g.clear(true);
-
-  function mainKeyPress(dragEvent) {
-    const pressedKey = getPressedKey(dragEvent, getMainKeySet(shift), false);
-    if (pressedKey) {
-      if (pressedKey.special === "ok") {
-        if (dragEvent.b === 0) {
-          // Seems to be a race condition between drag events and touch events
-          // This timeout helps us make sure the touch event has resolved before
-          // returning to the previous UI.
-          setTimeout(() => resolveFunction(typed), 50);
-        }
-        return;
+  function keyTouch(button, touchEvent) {
+    const pressedKey = getTouchedKey(touchEvent, activeKeySet);
+    if (pressedKey == null) {
+      // User tapped empty space.
+      swapKeySet(getMainKeySet(shift));
+      return;
+    }
+    // Haptic feedback
+    Bangle.buzz(25, 1);
+    if (pressedKey.subKeys) {
+      if (touchEvent.type > 1) {
+        shift = !shift;
+        swapKeySet(getMainKeySet(shift));
+      } else {
+        swapKeySet(pressedKey.subKeys);
       }
-      if (pressedKey.special === "del") {
-        if (dragEvent.b === 0) {
-          typed = typed.slice(0, -1);
-          drawTyped(typed);
-        }
-        return;
+    } else {
+      if (pressedKey.special) {
+        evaluateSpecialFunctions(pressedKey);
+      } else {
+        typed = typed + pressedKey.chars;
+        shift = false;
+        drawTyped(typed);
+        swapKeySet(getMainKeySet(shift));
       }
-      if (pressedKey.special === "shft") {
-        if (dragEvent.b === 0) {
-          shift = !shift;
-          enterMainKeyMode();
-        }
-        return;
-      }
-      if (pressedKey.special === "<-") {
-        if (dragEvent.b === 0) {
-          setTimeout(() => resolveFunction(), 50);
-        }
-        return;
-      }
-      enterSubKeyMode(pressedKey);
     }
   }
 
-  function subKeyPress(subKeys, dragEvent) {
-    const releasedKey = getPressedKey(dragEvent, subKeys, true);
-    if (releasedKey) {
-      typed = typed + releasedKey.chars[0];
-      shift = false;
-      drawTyped(typed);
-      enterMainKeyMode();
-    }
-    if (dragEvent.b === 0) {
-      enterMainKeyMode();
-    }
-  }
-
-  function enterSubKeyMode(key) {
-    const subKeys = getSubKeys(key);
+  function swapKeySet(newKeys) {
+    activeKeySet = newKeys;
     clearKeySpace();
-    drawKeys(subKeys);
-    Bangle.setUI();
-    Bangle.setUI({
-                   mode: "custom", drag: (dragEvent) => subKeyPress(subKeys, dragEvent)
-                 });
+    drawKeys(activeKeySet);
   }
 
-  function enterMainKeyMode() {
-    clearKeySpace();
-    drawKeys(getMainKeySet(shift));
-    Bangle.setUI();
-    Bangle.setUI({
-                   mode: "custom", drag: mainKeyPress
-                 });
+  function evaluateSpecialFunctions(key) {
+    switch (key.special) {
+      case "ok":
+        setTimeout(() => resolveFunction(typed), 50);
+        break;
+      case "del":
+        typed = typed.slice(0, -1);
+        drawTyped(typed);
+        break;
+      case "shft":
+        shift = !shift;
+        swapKeySet(getMainKeySet(shift));
+        break;
+      case "<-":
+        setTimeout(() => resolveFunction(), 50);
+        break;
+    }
   }
 
-  enterMainKeyMode();
+  Bangle.setUI({
+    mode: "custom", touch: keyTouch
+  });
+  swapKeySet(getMainKeySet(shift));
+  Bangle.setLocked(false);
+
   return new Promise((resolve, reject) => {
     // We want to be able to call this resolve outside of the promise declaration scope
     // I'm opting to do this because we are relying on user input mediated outside the
