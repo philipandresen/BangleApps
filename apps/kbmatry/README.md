@@ -1,4 +1,4 @@
-# Tiered Keyboard
+# Matryoshka Keyboard
 
 ![icon](icon.png)
 

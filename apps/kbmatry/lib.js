@@ -133,8 +133,8 @@ function getKeyByIndex(charSet, i, special) {
   const border          = 2;
   const gridWidth       = Math.ceil(Math.sqrt(charSet.length));
   const gridHeight      = Math.ceil(charSet.length / gridWidth);
-  const keyWidth        = Math.floor((Bangle.appRect.w) / gridWidth) - margin;
-  const keyHeight       = Math.floor((Bangle.appRect.h - keyboardOffsetY) / gridHeight) - margin;
+  const keyWidth        = Math.floor((g.getWidth()) / gridWidth) - margin;
+  const keyHeight       = Math.floor((g.getHeight() - keyboardOffsetY) / gridHeight) - margin;
   const gridx           = i % gridWidth;
   const gridy           = Math.floor(i / gridWidth) % gridWidth;
   const x               = gridx * (keyWidth + margin);
