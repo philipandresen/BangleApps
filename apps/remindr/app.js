@@ -92,8 +92,8 @@ const prioritizeLayout = new Layout({
 });
 
 function navMainMenu() {
-  g.clearRect(Bangle.appRect);
   g.reset();
+  g.clearRect(Bangle.appRect);
   Bangle.drawWidgets();
   mainMenuLayout.setUI();
   mainMenuLayout.update();
@@ -101,8 +101,8 @@ function navMainMenu() {
 }
 
 function navTask(task) {
-  g.clearRect(Bangle.appRect);
   g.reset();
+  g.clearRect(Bangle.appRect);
   taskLayout.taskTitle.label = task.text;
   taskLayout.taskTitle.font  = task.font;
   taskLayout.setUI();
@@ -111,8 +111,8 @@ function navTask(task) {
 }
 
 function navNudge(task) {
-  g.clearRect(Bangle.appRect);
   g.reset();
+  g.clearRect(Bangle.appRect);
   nudgeLayout.taskTitle.label = task.text;
   nudgeLayout.taskTitle.font  = task.font;
   nudgeLayout.setUI();
@@ -121,8 +121,8 @@ function navNudge(task) {
 }
 
 function navPrioritize() {
-  g.clearRect(Bangle.appRect);
   g.reset();
+  g.clearRect(Bangle.appRect);
   prioritizeLayout.setUI();
   nudgeLayout.update();
   prioritizeLayout.render();

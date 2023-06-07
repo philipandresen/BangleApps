@@ -4,16 +4,16 @@
  * @example
  * input({
  *     text: "Initial text",
- *     charSets: [["a", "b", "c", "d", "e", "f", "g"], ["1", "2", "3", "4"], ["="], ["ok"], ["del"], ["caps"]],
- *     charSetsShift: [["A", "B", "C", "D", "E", "F", "G"], ["!", "@", "#", "$"], ["cncl"], ["del"], ["caps"]],
+ *     charSets: [["a", "b", "c", "d", "e", "f", "g"], ["1", "2", "3", "4"], ["="], "ok", "del", "caps"],
+ *     charSetsShift: [["A", "B", "C", "D", "E", "F", "G"], ["!", "@", "#", "$"], "cncl", "del", "caps"],
  * }).then(typedText => {console.log(typedText);});
  * @param options The object containing initial options for the keyboard.
  * @param {string} options.text The initial text to display / edit in the keyboard
  * @param {array[]|string[]} [options.charSets] An array of arrays of characters. Each array becomes a key that, when
  *   pressed, takes the user to a sub-keyboard of that array's characters. If you define your own character set, you
- *   can include arrays containing special strings to serve as buttons. These can be ["ok"] ["cncl"] ["del"] ["shft"]
- *   ["spc"] or ["caps"]. You can include either the special "spc" button or just use the " " character. Individual
- *   letters in their own arrays will be given dedicated buttons.
+ *   can include special strings to serve as buttons. These can be "ok" "cncl" "del" "shft" "spc" or "caps". You can
+ *   include either the special "spc" button or just use the " " character. Individual letters in their own arrays will
+ *   be given dedicated buttons.
  * @param {array[]|string[]} [options.charSetsShift] Identical to options.charSets however these keys will only be
  *   displayed when the "SHFT" or "CAPS" key has been pressed.
  * @param {string} [options.chars] Similar to options.charSets but just a single string. The keyboard will
@@ -37,9 +37,9 @@ function input(options) {
     ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
     [" ", "`", "-", "=", "[", "]", "\\", ";", "'"],
     [",", ".", "/"],
-    ["ok"],
-    ["caps"],
-    ["del"]
+    "ok",
+    "caps",
+    "del"
   ]
 
   const charSetsShift = options.charSetsShift || options.charsShift && createCharSet(options.charsShift,
@@ -50,9 +50,9 @@ function input(options) {
     ["!", "@", "#", "$", "%", "^", "&", "*", "("],
     ["~", "_", "+", "{", "}", "|", ":", "\"", "<"],
     [">", "?"],
-    ["ok"],
-    ["caps"],
-    ["del"]
+    "ok",
+    "caps",
+    "del"
   ];
 
   /**
@@ -82,7 +82,6 @@ function input(options) {
       } else {
         keyIndex++;
       }
-      console.log(keyIndex, charIndex);
       keySpace = preferredNumChars[charIndex] * preferredNumKeys[keyIndex];
     }
     const charsPerKey = preferredNumChars[charIndex];
@@ -103,25 +102,38 @@ function input(options) {
   const keyDrawWidth  = 176 - offsetX;
   const keyDrawHeight = 176 - offsetY;
 
+  /**
+   * Draw an individual keyboard key - handles special formatting and the rectangle pad, followed by the character
+   * rendering. Returns a promise so that you can do many of these in a loop without blocking the thread.
+   * @param key
+   */
   function drawKey(key) {
-    let bgColor = g.theme.bg;
-    if (key.special === "ok") bgColor = "#0F0";
-    if (key.special === "cncl") bgColor = "#F00";
-    if (key.special === "del") bgColor = g.theme.bg2;
-    if (key.special === "spc") bgColor = g.theme.bg2;
-    if (key.special === "shft") {
-      bgColor = shift ? g.theme.bgH : g.theme.bg2;
-    }
-    if (key.special === "caps") {
-      bgColor = caps ? g.theme.bgH : g.theme.bg2;
-    }
-    g.setColor(g.theme.fg)
-     .fillRect({x: key.x, y: key.y, w: key.w, h: key.h, r: 1});
-    g.setColor(bgColor)
-     .fillRect({x: key.x + key.bord, y: key.y + key.bord, w: key.w - 2 * key.bord, h: key.h - 2 * key.bord, r: 1});
-    drawChars(key);
+    return new Promise((resolve, reject) => {
+      let bgColor = g.theme.bg;
+      if (key.special === "ok") bgColor = "#0F0";
+      if (key.special === "cncl") bgColor = "#F00";
+      if (key.special === "del") bgColor = g.theme.bg2;
+      if (key.special === "spc") bgColor = g.theme.bg2;
+      if (key.special === "shft") {
+        bgColor = shift ? g.theme.bgH : g.theme.bg2;
+      }
+      if (key.special === "caps") {
+        bgColor = caps ? g.theme.bgH : g.theme.bg2;
+      }
+      g.setColor(g.theme.fg)
+       .fillRect({x: key.x, y: key.y, w: key.w, h: key.h, r: 3});
+      g.setColor(bgColor)
+       .fillRect({x: key.x + key.bord, y: key.y + key.bord, w: key.w - 2 * key.bord, h: key.h - 2 * key.bord, r: 3});
+      drawChars(key);
+      resolve();
+    })
   }
 
+  /**
+   * Draw the characters for a given key - this handles the layout of all characters needed for the key, whether the
+   * key has 12 characters, 1, or if it represents a special key.
+   * @param key
+   */
   function drawChars(key) {
     const numChars = key.chars.length;
     if (key.special) {
@@ -155,6 +167,18 @@ function input(options) {
     }
   }
 
+  /**
+   * Given the width, height, padding (between chars) and number of characters that need to fit horizontally /
+   * vertically, this function attempts to select the largest font it can that will still fit within the bounds when
+   * drawing a grid of characters. Does not handle multi-letter entries well, assumes we are laying out a grid of
+   * single characters.
+   * @param width The total width available for letters (px)
+   * @param height The total height available for letters (px)
+   * @param padding The amount of space required between characters (px)
+   * @param gridWidth The number of characters wide the rendering is going to be
+   * @param gridHeight The number of characters high the rendering is going to be
+   * @returns {{w: number, h: number, font: string}}
+   */
   function getBestFont(width, height, padding, gridWidth, gridHeight) {
     let font            = "4x6";
     let w               = 4;
@@ -164,45 +188,66 @@ function input(options) {
     if (charMaxWidth >= 6 && charMaxHeight >= 8) {
       w    = 6;
       h    = 8;
-      font = "6x8"
+      font = "6x8";
     }
     if (charMaxWidth >= 12 && charMaxHeight >= 16) {
       w    = 12;
       h    = 16;
-      font = "6x8:2"
+      font = "6x8:2";
     }
     if (charMaxWidth >= 12 && charMaxHeight >= 20) {
       w    = 12;
       h    = 20;
-      font = "12x20"
+      font = "12x20";
     }
     if (charMaxWidth >= 20 && charMaxHeight >= 20) {
-      w    = charMaxWidth;
-      h    = charMaxHeight;
-      font = "Vector" + Math.floor(Math.min(w, h));
+      font       = "Vector" + Math.floor(Math.min(charMaxWidth, charMaxHeight));
+      const dims = g.setFont(font)
+                    .stringMetrics("W");
+      w          = dims.width
+      h          = dims.height;
     }
     return {w, h, font};
   }
 
+  /**
+   * Generate a set of key objects given an array of arrays of characters to make available for typing.
+   * @param characterArrays
+   * @returns {*[]}
+   */
   function getKeys(characterArrays) {
     const keys = [];
     characterArrays.forEach((characterArray, i) => {
       let special;
-      if (characterArray[0].length > 1) {
-        special = characterArray[0];
+      if (!Array.isArray(characterArray) && characterArray.length > 1) {
+        // If it's not an array we assume it's a string. Fingers crossed I guess, lol. Be nice to my functions!
+        special = characterArray;
       }
       const key = getKeyByIndex(characterArrays, i, special);
       if (!special) {
         key.chars = characterArray;
       }
       if (key.chars.length > 1) {
-        key.subKeys = getKeys(key.chars);
+        /*
+         This is a little hack - we know the user is going to have to touch the screen before we need to do anything
+         with subkeys - we're taking a "get to it when you get ot it" knowing it will be done before we need it.
+         */
+        new Promise(resolve => {
+          key.subKeys = getKeys(key.chars);
+        })
       }
       keys.push(key);
     });
     return keys;
   }
 
+  /**
+   * Given a set of characters (or sets of characters) get the position and dimensions of the i'th key in that set.
+   * @param charSet An array where each element represents a key on the hypothetical keyboard.
+   * @param i The index of the key in the set you want to get dimensions for.
+   * @param special The special property of the key - for example "del" for a key used for deleting characters.
+   * @returns {{special, bord: number, pad: number, w: number, x: number, h: number, y: number, chars: *[]}}
+   */
   function getKeyByIndex(charSet, i, special) {
     const padding    = 4;
     const border     = 2;
@@ -216,25 +261,39 @@ function input(options) {
     const y          = gridy * (keyHeight + margin) + offsetY;
     const w          = keyWidth;
     const h          = keyHeight;
-    let bgCol        = g.theme.bg;
     return {x, y, w, h, pad: padding, bord: border, chars: [], special};
   }
 
   const mainKeys      = getKeys(charSets);
   const mainKeysShift = getKeys(charSetsShift);
 
+  /**
+   * Get the key set corresponding to the indicated shift state. Allows easy switching between capital letters and
+   * lower case by just switching the boolean passed here.
+   * @param shift
+   * @returns {*[]}
+   */
   function getMainKeySet(shift) {
     return shift ? mainKeysShift : mainKeys;
   }
 
+  /**
+   * Draw all the given keys on the screen.
+   * @param keys
+   */
   function drawKeys(keys) {
     keys.forEach(key => {
       drawKey(key);
     });
   }
 
+  /**
+   * Draw the text that the user has typed so far, includes a cursor and automatic truncation when the string is too
+   * long.
+   * @param text
+   * @param cursorChar
+   */
   function drawTyped(text, cursorChar) {
-    cursorChar      = cursorChar || "_";
     let visibleText = text;
     let ellipsis    = false;
     const maxWidth  = 176 - 40;
@@ -263,6 +322,9 @@ function input(options) {
     }
   }, 200);
 
+  /**
+   * Clear the space on the screen that the keyboard occupies (not the text the user has written).
+   */
   function clearKeySpace() {
     g.setColor(g.theme.bg)
      .fillRect(offsetX, offsetY, 176, 176);
@@ -270,16 +332,25 @@ function input(options) {
 
   g.clear(true);
 
+  /**
+   * Based on a touch even, determine which key was pressed by the user.
+   * @param touchEvent
+   * @param keys
+   * @returns {*}
+   */
   function getTouchedKey(touchEvent, keys) {
-    return keys.reduce((pressed, key) => {
-      if (touchEvent.x < key.x) return pressed;
-      if (touchEvent.x > key.x + key.w) return pressed;
-      if (touchEvent.y < key.y) return pressed;
-      if (touchEvent.y > key.y + key.h) return pressed;
-      return key;
-    }, null);
+    return keys.find((key) => {
+      let relX = touchEvent.x - key.x;
+      let relY = touchEvent.y - key.y;
+      return relX > 0 && relX < key.w && relY > 0 && relY < key.h;
+    })
   }
 
+  /**
+   * On a touch event, determine whether a key is touched and take appropriate action if it is.
+   * @param button
+   * @param touchEvent
+   */
   function keyTouch(button, touchEvent) {
     const pressedKey = getTouchedKey(touchEvent, activeKeySet);
     if (pressedKey == null) {
@@ -290,6 +361,7 @@ function input(options) {
     // Haptic feedback
     Bangle.buzz(25, 1);
     if (pressedKey.subKeys) {
+      // Hold press for "shift!"
       if (touchEvent.type > 1) {
         shift = !shift;
         swapKeySet(getMainKeySet(shift !== caps));
@@ -302,18 +374,26 @@ function input(options) {
       } else {
         typed = typed + pressedKey.chars;
         shift = false;
-        drawTyped(typed);
+        drawTyped(typed, "");
         swapKeySet(getMainKeySet(shift !== caps));
       }
     }
   }
 
+  /**
+   * Manage setting, generating, and rendering new keys when a key set is changed.
+   * @param newKeys
+   */
   function swapKeySet(newKeys) {
     activeKeySet = newKeys;
     clearKeySpace();
     drawKeys(activeKeySet);
   }
 
+  /**
+   * Determine if the key contains any of the special strings that have their own special behaviour when pressed.
+   * @param key
+   */
   function evaluateSpecialFunctions(key) {
     switch (key.special) {
       case "ok":
@@ -321,7 +401,7 @@ function input(options) {
         break;
       case "del":
         typed = typed.slice(0, -1);
-        drawTyped(typed);
+        drawTyped(typed, "");
         break;
       case "shft":
         shift = !shift;
@@ -346,10 +426,12 @@ function input(options) {
   swapKeySet(getMainKeySet(shift !== caps));
   Bangle.setLocked(false);
 
+  /**
+   * We return a promise but the resolve function is assigned to a variable in the higher function scope. That allows
+   * us to return the promise and resolve it after we are done typing without having to return the entire scope of the
+   * application within the promise.
+   */
   return new Promise((resolve, reject) => {
-    // We want to be able to call this resolve outside of the promise declaration scope
-    // I'm opting to do this because we are relying on user input mediated outside the
-    // scope of the code where the promise is declared.
     resolveFunction = resolve;
   }).then((result) => {
     g.clearRect(Bangle.appRect);
