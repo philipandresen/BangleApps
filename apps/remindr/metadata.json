@@ -1,6 +1,6 @@
 { "id": "remindr",
   "name": "Reminder",
-  "version":"1.00",
+  "version":"1.01",
   "description": "A working memory prosthesis",
   "icon": "app-icon.js",
   "tags": "tool",
