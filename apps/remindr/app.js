@@ -1,4 +1,5 @@
 const Layout = require("Layout");
+const textInput = require("textinput");
 
 const localTaskFile = "remindr.settings.json";
 const savedData     = require("Storage")
@@ -135,7 +136,7 @@ function interruptTask() {
 }
 
 function addTask() {
-  require("textinput").input({text:""})
+  textInput.input({text:""})
   .then(text => {
     if (!text) {
       navMainMenu();
@@ -201,7 +202,7 @@ function navEditTask(taskId) {
     ""                      : {
       title: task.text, back: navManageTasks
     }, "Start Task"         : () => startTask(taskId), "Edit Title": () => {
-      require("textinput").input({text:task.text})
+      textinput.input({text:task.text})
       .then(result => {
         if (result) {
           task.text = result;
@@ -260,7 +261,7 @@ function navTemplates() {
 }
 
 function createTemplate() {
-  require("textinput").input({text:""})
+  textinput.input({text:""})
   .then(result => {
     if (result) {
       const templateId   = Math.round(getTime());
@@ -301,7 +302,7 @@ function editTemplate(templateId) {
 
 function renameTemplate(templateId) {
   const template = templates[templateId];
-  require("textinput").input({text:template.name})
+  textinput.input({text:template.name})
   .then(result => {
     if (result) {
       template.name = result;

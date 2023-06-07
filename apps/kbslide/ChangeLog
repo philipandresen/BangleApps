@@ -2,3 +2,4 @@
 1.01: Change swipe interface to taps, speed up responses (efficiency tweaks).
 1.02: Generalize drawing and letter scaling. Allow custom and auto-generated character sets. Improve documentation.
 1.03: Attempt to improve keyboard load time.
+1.04: Make code asynchronous and improve load time.
