@@ -46,11 +46,46 @@ require("textinput").input({text:""}).then(result => {
   console.log("The user entered: ", result);
 });
 ```
+### Documentation
+
+`{Promise(string)} input(options)`
+
+Given initial options, allow the user to type a set of characters and return their entry in a promise. If you do not 
+submit your own character set, a default alphanumeric keyboard will display.
+
+* `options`: The object containing initial options for the keyboard.
+
+  * `{string} options.text`: The initial text to display / edit in the keyboard
+  * `{array[]|string[]} [options.charSets]`: An array of arrays of characters. Each array becomes a key that, when 
+pressed, takes the user to a sub-keyboard of that array's characters. If you define your own character set, you
+can include arrays containing special strings to serve as buttons. These can be ["ok"] ["cncl"] ["del"] ["shft"]
+["spc"] or ["caps"]. You can include either the special "spc" button or just use the " " character. Individual
+letters in their own arrays will be given dedicated buttons.
+  * `{array[]|string[]} [options.charSetsShift]`: Identical to options.charSets however these keys will only be
+displayed when the "SHFT" or "CAPS" key has been pressed.
+  * `{string} [options.chars]`: Similar to options.charSets but just a single string. The keyboard will 
+automatically divide the string into keys and subkeys.
+  * `{string} [options.charsShift]`: Similar to options.chars but only visible after the user hits "SHFT" or "CAPS"
+
+### Example:
+```js
+input({
+  text: "Initial text",   
+  charSets: [["a", "b", "c", "d", "e", "f", "g"], ["1", "2", "3", "4"], ["="], ["ok"], ["del"], ["caps"]],
+  charSetsShift: [["A", "B", "C", "D", "E", "F", "G"], ["!", "@", "#", "$"], ["cncl"], ["del"], ["caps"]],
+}).then(typedText => {console.log(typedText);});
+```
 
 The promise resolves when the user hits "ok" on the input or if they cancel. If the user cancels, undefined is 
-returned, although the user can hit "OK" with an empty string as well.
+returned, although the user can hit "OK" with an empty string as well. If you define a custom character set and
+do not include the "ok" button your user will be soft-locked by the keyboard. Fair warning!
 
-The first argument to `input` is an object containing the following:
+At some point I may add swipe-for-space and swipe-for-delete as well as swipe-for-submit and swipe-for-cancel
+however I want to have a good strategy for the touch screen 
+[affordance](https://careerfoundry.com/en/blog/ux-design/affordances-ux-design/).
 
-* `text` - initial text to edit
+## Secret features
+
+If you long press a key with characters on it, that will enable "Shift" mode. 
+Not sure how to indicate this with affordances, but it DOES work.
 
