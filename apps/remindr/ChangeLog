@@ -1,3 +1,4 @@
 1.00: Implement reminder app
 1.01: Add external keyboard dependency
 1.03: move textinput call to be more performant
+1.04: Redo UI to include taps and touch

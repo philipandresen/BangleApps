@@ -1,5 +1,5 @@
-const Layout = require("Layout");
-const textInput = require("textinput");
+const Layout    = require("Layout");
+const textinput = require("textinput");
 
 const localTaskFile = "remindr.settings.json";
 const savedData     = require("Storage")
@@ -13,46 +13,21 @@ let activeTaskId    = null;
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 
-const darkTheme = {
-  fg  : 0xFFFF,  // foreground colour
-  bg  : 0,       // background colour
-  fg2 : 0xFFFF,  // accented foreground colour
-  bg2 : 0x0007,  // accented background colour
-  fgH : 0xFFFF,  // highlighted foreground colour
-  bgH : 0x02F7,  // highlighted background colour
-  dark: true,  // Is background dark (e.g. foreground should be a light colour)
-};
-
-const lightTheme = {
-  fg  : 0,  // foreground colour
-  bg  : 0xFFFF,       // background colour
-  fg2 : "#000",  // accented foreground colour
-  bg2 : 0xFFF8,  // accented background colour
-  fgH : 0,  // highlighted foreground colour
-  bgH : 0xFD08,  // highlighted background colour
-  dark: false,  // Is background dark (e.g. foreground should be a light colour)
-};
-
-g.setTheme(settings.theme);
-
 const mainMenuLayout = new Layout({
   type: "v", pad: 5, c: [
-    {type: "txt", label: "-- WORKING --", font: "12x20"},
-    {type: "txt", label: "MEMORY", font: "12x20"},
+    {type: "txt", label: "-- WORKING MEMORY --", font: "6x8:2"},
     {type: "btn", label: "New Task", fillx: 1, filly: 1, cb: () => addTask()},
-    {type: "btn", label: "View Tasks", fillx: 1, filly: 1, cb: () => navManageTasks()},
-    {type: "btn", label: "Settings", fillx: 1, cb: () => navSettings()}
+    {type: "btn", label: "Manage", fillx: 1, cb: () => navSettings()}
   ]
 });
 
 const taskLayout = new Layout({
   type: "v", pad: 5, c: [
+    {type: undefined, filly: 1},
     {type: "txt", label: "-- Current Task --", font: "6x8"},
-    {type: undefined, filly: 1},
     {type: "txt", id: "taskTitle", label: "", font: "Vector10"},
-    {type: undefined, filly: 1},
-    {type: "btn", label: "Done", fillx: 1, cb: () => affirmDone(activeTaskId)},
-    {type: "btn", label: "Re-prioritize", fillx: 1, cb: () => changePriority(activeTaskId)}
+    {type: "txt", label: "-- Touch for options --", font: "6x8"},
+    {type: undefined, filly: 1}
   ]
 });
 
@@ -67,7 +42,7 @@ const nudgeLayout = new Layout({
       type: "h", filly: 1, fillx: 1, c: [
         {
           type: "btn", col: "#0F0", label: "Yes!", fillx: 1, filly: 1, cb: () => {
-            affirmOnTask(activeTaskId);
+            affirmOnTask();
           }
         }, {
           type: "btn", col: "#F00", font: "6x8:2", label: "No!", fillx: 1, filly: 1, cb: () => {
@@ -109,6 +84,7 @@ function navTask(task) {
   taskLayout.setUI();
   taskLayout.update();
   taskLayout.render();
+  Bangle.on("touch", changePriority);
 }
 
 function navNudge(task) {
@@ -116,9 +92,11 @@ function navNudge(task) {
   g.clearRect(Bangle.appRect);
   nudgeLayout.taskTitle.label = task.text;
   nudgeLayout.taskTitle.font  = task.font;
+  Bangle.setLCDPower(true);
   nudgeLayout.setUI();
   nudgeLayout.update();
   nudgeLayout.render();
+  Bangle.on("tap", affirmOnTask);
 }
 
 function navPrioritize() {
@@ -136,30 +114,30 @@ function interruptTask() {
 }
 
 function addTask() {
-  textInput.input({text:""})
-  .then(text => {
-    if (!text) {
-      navMainMenu();
-      return;
-    }
-    const font        = getTaskFont(text);
-    const newTask     = {
-      id                : Math.round(getTime()),
-      text,
-      font,
-      baseInterval      : 30,
-      backoffScale      : [0.5, 1, 2, 3, 6, 10],
-      reminderIndex     : 1,
-      incrementalBackoff: true,
-      distractCount     : 0,
-      onTaskCount       : 0,
-      unresponsiveCount : 0,
-      complete          : false,
-    };
-    tasks[newTask.id] = newTask;
-    saveTasksToFlash();
-    startTask(newTask.id);
-  });
+  textinput.input({text: ""})
+           .then(text => {
+             if (!text) {
+               navMainMenu();
+               return;
+             }
+             const font        = getTaskFont(text);
+             const newTask     = {
+               id                : Math.round(getTime()),
+               text,
+               font,
+               baseInterval      : 30,
+               backoffScale      : [0.5, 1, 2, 3, 6, 10],
+               reminderIndex     : 1,
+               incrementalBackoff: true,
+               distractCount     : 0,
+               onTaskCount       : 0,
+               unresponsiveCount : 0,
+               complete          : false,
+             };
+             tasks[newTask.id] = newTask;
+             saveTasksToFlash();
+             startTask(newTask.id);
+           });
 }
 
 function getTaskFont(text) {
@@ -202,15 +180,15 @@ function navEditTask(taskId) {
     ""                      : {
       title: task.text, back: navManageTasks
     }, "Start Task"         : () => startTask(taskId), "Edit Title": () => {
-      textinput.input({text:task.text})
-      .then(result => {
-        if (result) {
-          task.text = result;
-          task.font = getTaskFont(result);
-          saveTasksToFlash();
-        }
-        navEditTask(taskId);
-      });
+      textinput.input({text: task.text})
+               .then(result => {
+                 if (result) {
+                   task.text = result;
+                   task.font = getTaskFont(result);
+                   saveTasksToFlash();
+                 }
+                 navEditTask(taskId);
+               });
     }, "Interval"           : {
       value: task.baseInterval, min: 10, max: 300, step: 10, wrap: false, onchange: v => {
         task.baseInterval = v;
@@ -229,19 +207,8 @@ function navEditTask(taskId) {
 function navSettings() {
   const menu = {
     ""            : {
-      title: "Settings", back: navMainMenu
-    }, "Theme"    : {
-      value: g.theme.dark, format: v => v ? "Dark" : "Light", onchange: v => {
-        if (v) {
-          g.setTheme(darkTheme);
-        } else {
-          g.setTheme(lightTheme);
-        }
-        settings.theme = g.theme;
-        saveTasksToFlash();
-        navSettings();
-      }
-    }, "Templates": navTemplates,
+      title: "Manage", back: navMainMenu
+    }, "Templates": navTemplates, "Pending Tasks": navManageTasks, "Completed Tasks": () => {}
   };
   E.showMenu(menu);
 }
@@ -261,26 +228,26 @@ function navTemplates() {
 }
 
 function createTemplate() {
-  textinput.input({text:""})
-  .then(result => {
-    if (result) {
-      const templateId   = Math.round(getTime());
-      const pendingTasks = {};
-      for (let id of Object.keys(tasks)) {
-        const task = tasks[id];
-        if (!task.complete) {
-          const newTaskId           = task.id + "t";
-          const taskCopy            = JSON.parse(JSON.stringify(task));
-          taskCopy.id               = newTaskId;
-          pendingTasks[taskCopy.id] = taskCopy;
-        }
-      }
-      templates[templateId] = {
-        name: result, tasks: pendingTasks
-      };
-    }
-    navTemplates();
-  });
+  textinput.input({text: ""})
+           .then(result => {
+             if (result) {
+               const templateId   = Math.round(getTime());
+               const pendingTasks = {};
+               for (let id of Object.keys(tasks)) {
+                 const task = tasks[id];
+                 if (!task.complete) {
+                   const newTaskId           = task.id + "t";
+                   const taskCopy            = JSON.parse(JSON.stringify(task));
+                   taskCopy.id               = newTaskId;
+                   pendingTasks[taskCopy.id] = taskCopy;
+                 }
+               }
+               templates[templateId] = {
+                 name: result, tasks: pendingTasks
+               };
+             }
+             navTemplates();
+           });
 }
 
 function editTemplate(templateId) {
@@ -302,13 +269,13 @@ function editTemplate(templateId) {
 
 function renameTemplate(templateId) {
   const template = templates[templateId];
-  textinput.input({text:template.name})
-  .then(result => {
-    if (result) {
-      template.name = result;
-    }
-    editTemplate(templateId);
-  });
+  textinput.input({text: template.name})
+           .then(result => {
+             if (result) {
+               template.name = result;
+             }
+             editTemplate(templateId);
+           });
 }
 
 function appendTemplate(templateId) {
@@ -372,14 +339,15 @@ function startTask(taskId) {
   }, timeToNext);
 }
 
-function affirmOnTask(taskId) {
-  const task         = tasks[taskId];
+function affirmOnTask() {
+  Bangle.removeListener("tap", affirmOnTask);
+  const task         = tasks[activeTaskId];
   task.reminderIndex = Math.min(task.reminderIndex + 1, task.backoffScale.length - 1);
   task.onTaskCount++;
   clearTimeout(responseTimeout);
   responseTimeout = null;
   showTempMessage("Great work!", "On task!", 1000)
-  .then(() => startTask(taskId));
+  .then(() => startTask(activeTaskId));
 }
 
 function showTempMessage(message, title, time) {
@@ -400,6 +368,7 @@ function affirmDistracted(taskId) {
 }
 
 function affirmUnresponsive(taskId) {
+  Bangle.removeListener("tap", affirmOnTask);
   const task = tasks[taskId];
   task.unresponsiveCount++;
   task.reminderIndex = Math.max(task.reminderIndex - 1, 0);
@@ -407,6 +376,7 @@ function affirmUnresponsive(taskId) {
 }
 
 function nudgeTask(taskId) {
+  Bangle.removeListener("touch", changePriority);
   Bangle.buzz(200, 1);
   const task = tasks[taskId];
   navNudge(task);
@@ -420,10 +390,11 @@ function affirmDone(taskId) {
    .then(() => navManageTasks());
 }
 
-function changePriority(taskId) {
+function changePriority() {
+  Bangle.removeListener("touch", changePriority);
   interruptTask();
-  prioritizeLayout.taskTitle.label = tasks[taskId].text;
-  prioritizeLayout.taskTitle.font  = tasks[taskId].font;
+  prioritizeLayout.taskTitle.label = tasks[activeTaskId].text;
+  prioritizeLayout.taskTitle.font  = tasks[activeTaskId].font;
   navPrioritize();
 }
 
