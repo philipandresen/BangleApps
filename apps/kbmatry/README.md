@@ -2,7 +2,10 @@
 
 ![icon](icon.png)
 
-![screenshot](screenshot.png)
+![screenshot](screenshot.png) ![screenshot](screenshot6.png) 
+
+![screenshot](screenshot5.png) ![screenshot](screenshot2.png) 
+![screenshot](screenshot3.png) ![screenshot](screenshot4.png)
 
 Nested key input utility.
 
@@ -79,11 +82,28 @@ const customKeyboard = textInput.generateKeyboard([
 textInput.input({text: "", keyboardMain: customKeyboard})
          .then(result => {
            console.log("The user entered: ", result);
+           // And they could only enter numbers, periods, and dashes!
          });
 ```
 
 This will give you a keyboard with six buttons. The first three buttons will open up a 2x2 keyboard. The second three
 buttons are special keys for submitting, deleting, and cancelling respectively.
+
+Finally if you are like, super lazy, or have a dynamic set of keys you want to be using at any given time, you can 
+generate keysets from strings like so:
+
+```js
+const textInput = require("textinput");
+
+const customKeyboard = textInput.generateKeyboard(createCharSet("ABCDEFGHIJKLMNOP", ["ok", "shft", "cncl"]));
+const customShiftKeyboard = textInput.generateKeyboard(createCharSet("abcdefghijklmnop", ["ok", "shft", "cncl"]));
+// ...
+textInput.input({text: "", keyboardMain: customKeyboard, keyboardShift: customShiftKeyboard})
+         .then(result => {
+           console.log("The user entered: ", result);
+           // And the keyboard was automatically generated to include "ABCDEFGHIJKLMNOP" plus an OK button, a shift button, and a cancel button!
+         });
+```
 
 The promise resolves when the user hits "ok" on the input or if they cancel. If the user cancels, undefined is
 returned, although the user can hit "OK" with an empty string as well. If you define a custom character set and
@@ -96,5 +116,4 @@ however I want to have a good strategy for the touch screen
 ## Secret features
 
 If you long press a key with characters on it, that will enable "Shift" mode.
-Not sure how to indicate this with affordances, but it DOES happen.
 

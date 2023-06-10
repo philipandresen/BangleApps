@@ -28,14 +28,12 @@ function createCharSet(text, specials) {
     keySpace = preferredNumChars[charIndex] * preferredNumKeys[keyIndex];
   }
   const charsPerKey = preferredNumChars[charIndex];
-  const charSet     = [];
+  let charSet     = [];
   for (let i = 0; i < text.length; i += charsPerKey) {
     charSet.push(text.slice(i, i + charsPerKey)
                      .split(""));
   }
-  specials.forEach(special => {
-    charSet.push([special]);
-  });
+  charSet = charSet.concat(specials);
   return charSet;
 }
 
@@ -194,7 +192,7 @@ const defaultCharSet = [
   [" ", "`", "-", "=", "[", "]", "\\", ";", "'"],
   [",", ".", "/"],
   "ok",
-  "caps",
+  "shft",
   "del"
 ];
 
@@ -206,7 +204,7 @@ const defaultCharSetShift = [
   ["~", "_", "+", "{", "}", "|", ":", "\"", "<"],
   [">", "?"],
   "ok",
-  "caps",
+  "shft",
   "del"
 ];
 
@@ -231,8 +229,12 @@ function input(options) {
   const offsetY = 40;
 
   E.showMessage("Loading...");
-
-  const keyboardPromise = Promise.all([generateKeyboard(defaultCharSet), generateKeyboard(defaultCharSetShift)]);
+  let keyboardPromise;
+  if (options.keyboardMain) {
+    keyboardPromise = Promise.all([options.keyboardMain, options.keyboardShift || Promise.resolve([])]);
+  } else {
+    keyboardPromise = Promise.all([generateKeyboard(defaultCharSet), generateKeyboard(defaultCharSetShift)])
+  }
 
   let mainKeys;
   let mainKeysShift;
