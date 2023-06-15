@@ -8,11 +8,19 @@ Bangle.drawWidgets();
 
 const localTaskFile = "wrkmem.json";
 const savedData     = {
-  tasks: [], keyboardAlpha: undefined, settings: {textOutlines: true, noWordBreaks: true}
+  tasks: [], keyboardAlpha: undefined, settings: {
+    textOutlines     : true,
+    noWordBreaks     : true,
+    onTaskMessage    : "Great Job!",
+    distractedMessage: "Don't worry, you've got this!",
+    defaultInterval  : 30
+  }
 };
 
-Object.assign(savedData, require("Storage")
-.readJSON(localTaskFile, true) || {});
+const loadedData = require("Storage").readJSON(localTaskFile, true);
+
+Object.assign(savedData.settings, loadedData.settings || {});
+savedData.tasks = loadedData.tasks || [];
 
 let currentMenu;
 
@@ -49,7 +57,7 @@ let keyboardAlpha, keyboardAlphaShift;
 
 if (textInput.generateKeyboard) {
   //const charSet = textInput.createCharSet("ABCDEFGHIJKLMNOPQRSTUVWXYZ", ["spc", "ok", "del"]);
-  keyboardAlpha = textInput.generateKeyboard([
+  keyboardAlpha      = textInput.generateKeyboard([
     ["a", "b", "c", "j", "k", "l", "s", "t", "u"],
     ["d", "e", "f", "m", "n", "o", "v", "w", "x"],
     ["g", "h", "i", "p", "q", "r", "y", "z"],
@@ -435,7 +443,7 @@ function nudge(task) {
 function affirmOnTask(task) {
   task.affirmCount++;
   task.backoffIndex = Math.min(task.incrementalBackoffSet.length - 1, task.backoffIndex + 1);
-  showTempMessage("Great job!", "On Task!", () => startTask(task));
+  showTempMessage(savedData.settings.onTaskMessage, "On Task!", () => startTask(task));
 }
 
 /**
@@ -446,7 +454,7 @@ function affirmOnTask(task) {
 function affirmDistracted(task) {
   task.distractCount++;
   task.backoffIndex = Math.max(0, task.backoffIndex - 1);
-  showTempMessage("Don't worry! You've got this!", "Distracted!", () => startTask(task));
+  showTempMessage(savedData.settings.distractedMessage, "Distracted!", () => startTask(task));
 }
 
 /**
@@ -494,6 +502,7 @@ function completeTask(task) {
  */
 function restartTask(task) {
   task.complete = false;
+  task.backoffIndex = 1;
   removeTask(task, allTasks);
   allTasks.unshift(task);
   save();
@@ -525,7 +534,7 @@ function createTask(text) {
     affirmCount      : 0,
     distractCount    : 0,
     unresponsiveCount: 0,
-    interval         : 30,
+    interval         : savedData.settings.defaultInterval,
     backoffIndex     : 1,
     incrementalBackoffSet,
     complete         : false,
@@ -679,14 +688,31 @@ function showTaskList(filterFn, backFn) {
  */
 function showSettingsMenu(backFn) {
   const settingsMenu = {
-    ""               : {title: "Manage", back: backFn},
-    "Pending Tasks"  : () => showTaskList(task => !task.complete, () => showSettingsMenu(backFn)),
-    "Completed Tasks": () => showTaskList(task => task.complete, () => showSettingsMenu(backFn)),
-    "Text Outlines"  : {value: savedData.settings.textOutlines, onchange: v => savedData.settings.textOutlines = v},
-    "No Word Breaks" : {value: savedData.settings.noWordBreaks, onchange: v => savedData.settings.noWordBreaks = v}
+    ""                : {title: "Manage", back: backFn},
+    "Pending Tasks"   : () => showTaskList(task => !task.complete, () => showSettingsMenu(backFn)),
+    "Completed Tasks" : () => showTaskList(task => task.complete, () => showSettingsMenu(backFn)),
+    "Text Outlines"   : {value: savedData.settings.textOutlines, onchange: v => savedData.settings.textOutlines = v},
+    "No Word Breaks"  : {value: savedData.settings.noWordBreaks, onchange: v => savedData.settings.noWordBreaks = v},
+    "Default interval": {
+      value   : savedData.settings.defaultInterval,
+      min     : 10,
+      step    : 10,
+      onchange: v => savedData.settings.defaultInterval = v
+    },
+    "On Task Msg"     : () => textInput.input({text: savedData.settings.onTaskMessage})
+                                       .then(result => {
+                                         savedData.settings.onTaskMessage = result;
+                                         showSettingsMenu(backFn)
+                                       }),
+    "Distract Msg"     : () => textInput.input({text: savedData.settings.distractedMessage})
+                                       .then(result => {
+                                         savedData.settings.distractedMessage = result;
+                                         showSettingsMenu(backFn)
+                                       })
   }
   E.showMenu(settingsMenu);
 }
+
 const mainMenu = createMenu({
   title          : "Working Memory", items: [
     {text: "New Task", size: 2, callback: () => newTask("")}, {

@@ -1,2 +1,4 @@
 1.00: Implement Working Memory Helper app
 1.01: Fix issue with rendering in 2v18
+1.02: Add settings for messages and default interval
+1.03: Reset backoff interval when re-starting completed tasks.
