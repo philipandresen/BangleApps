@@ -382,7 +382,7 @@ function input(options) {
    */
   function keyTouch(button, touchEvent) {
     const pressedKey = getTouchedKey(touchEvent, activeKeySet);
-    if (pressedKey == null) {
+    if (pressedKey == null && touchEvent.y < offsetY) {
       // User tapped empty space.
       swapKeySet(getMainKeySet(shift !== caps));
       return;
